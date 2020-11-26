@@ -48,15 +48,23 @@ namespace PerformanceTests
 
         #region Option 1
 
-        private void Generate_Option1(object sender, RoutedEventArgs e)
+        private async void Generate_Option1(object sender, RoutedEventArgs e)
         {
             if (!DatePicker.SelectedDate.HasValue)
                 return;
 
             var messages = GenerateMessagesEachSecond(Day.Date, "Option1");
 
+            var tasks = new List<Task>();
+
             var table = tableClient.GetTableReference("messages");
-            table.CreateIfNotExists();
+            try
+            {
+                table.CreateIfNotExists();
+            }
+            catch (Exception)
+            {
+            }
 
             try
             {
@@ -66,13 +74,15 @@ namespace PerformanceTests
                     operation.Insert(m);
                     if (operation.Count == 100)
                     {
-                        table.ExecuteBatch(operation);
+                        tasks.Add(table.ExecuteBatchAsync(operation));
                         operation = new TableBatchOperation();
                     }
                 }
 
                 if (operation.Count > 0)
-                    table.ExecuteBatch(operation);
+                    tasks.Add(table.ExecuteBatchAsync(operation));
+
+                await Task.WhenAll();
             }
             catch (Exception ex)
             {
@@ -127,10 +137,7 @@ namespace PerformanceTests
                             {
                                 var seg = await table.ExecuteQuerySegmentedAsync(query, token);
                                 token = seg.ContinuationToken;
-                                lock (finalResult)
-                                {
-                                    finalResult.AddRange(seg);
-                                }
+                                finalResult.AddRange(seg);
                             }
                             while (token != null);
                         }));
@@ -152,10 +159,7 @@ namespace PerformanceTests
                         {
                             var seg = await table.ExecuteQuerySegmentedAsync(query, token);
                             token = seg.ContinuationToken;
-                            lock (finalResult)
-                            {
-                                finalResult.AddRange(seg);
-                            }
+                            finalResult.AddRange(seg);
                         }
                         while (token != null);
                     }));

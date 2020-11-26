@@ -15,7 +15,7 @@
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical">
                 <TextBlock>Day:</TextBlock>
-                <DatePicker x:Name="DatePicker" SelectedDate="{x:Bind Day}"/>
+                <DatePicker x:Name="DatePicker" SelectedDate="{x:Bind Day, Mode=TwoWay}"/>
             </StackPanel>
 
             <StackPanel Orientation="Vertical">

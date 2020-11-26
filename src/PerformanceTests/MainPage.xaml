@@ -5,7 +5,8 @@
     xmlns:local="using:PerformanceTests"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:controls="using:Microsoft.Toolkit.Uwp.UI.Controls" xmlns:sys="using:System"
+    xmlns:controls="using:Microsoft.Toolkit.Uwp.UI.Controls"    
+    xmlns:sys="using:System"
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
@@ -16,6 +17,10 @@
             <StackPanel Orientation="Vertical">
                 <TextBlock>Day:</TextBlock>
                 <DatePicker x:Name="DatePicker" SelectedDate="{x:Bind Day, Mode=TwoWay}"/>
+                <TextBlock>+ days:</TextBlock>
+                <TextBox Text="{x:Bind DaysToAdd, Mode=TwoWay}" />
+                <TextBlock>Day index:</TextBlock>
+                <TextBlock Text="{x:Bind DayIndex, Mode=TwoWay}" />
             </StackPanel>
 
             <StackPanel Orientation="Vertical">

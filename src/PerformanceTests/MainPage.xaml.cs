@@ -31,7 +31,9 @@ namespace PerformanceTests
         private CloudStorageAccount storageAccount;
         private CloudTableClient tableClient;
 
-        public DateTimeOffset Day = new DateTimeOffset(2020, 11, 25, 0, 0, 0, TimeSpan.Zero);
+        public DateTimeOffset Day = new DateTimeOffset(2019, 01, 01, 0, 0, 0, TimeSpan.Zero);
+        public int DaysToAdd = 180;
+        public int DayIndex = 0;
 
         public MainPage()
         {
@@ -53,11 +55,7 @@ namespace PerformanceTests
             if (!DatePicker.SelectedDate.HasValue)
                 return;
 
-            var messages = GenerateMessagesEachSecond(Day.Date, "Option1");
-
-            var tasks = new List<Task>();
-
-            var table = tableClient.GetTableReference("messages");
+            var table = tableClient.GetTableReference("option1");
             try
             {
                 table.CreateIfNotExists();
@@ -66,27 +64,35 @@ namespace PerformanceTests
             {
             }
 
-            try
+
+            for (var day = 0; day < DaysToAdd; day++)
             {
-                var operation = new TableBatchOperation();
-                foreach (var m in messages)
+                DayIndex = day;
+                var messages = GenerateMessagesEachSecond(Day.Date.AddDays(day), "Option1");
+                var tasks = new List<Task>();
+
+                try
                 {
-                    operation.Insert(m);
-                    if (operation.Count == 100)
+                    var operation = new TableBatchOperation();
+                    foreach (var m in messages)
                     {
-                        tasks.Add(table.ExecuteBatchAsync(operation));
-                        operation = new TableBatchOperation();
+                        operation.Insert(m);
+                        if (operation.Count == 100)
+                        {
+                            tasks.Add(table.ExecuteBatchAsync(operation));
+                            operation = new TableBatchOperation();
+                        }
                     }
+
+                    if (operation.Count > 0)
+                        tasks.Add(table.ExecuteBatchAsync(operation));
+
+                    await Task.WhenAll();
                 }
-
-                if (operation.Count > 0)
-                    tasks.Add(table.ExecuteBatchAsync(operation));
-
-                await Task.WhenAll();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.Message);
+                }
             }
         }
         private async void Retrive_Option1(object sender, RoutedEventArgs e)
@@ -104,7 +110,7 @@ namespace PerformanceTests
                     }
             }
 
-            var table = tableClient.GetTableReference("messages");
+            var table = tableClient.GetTableReference("option1");
 
             try
             {
@@ -182,14 +188,13 @@ namespace PerformanceTests
         private List<MessageEntity> GenerateMessagesEachSecond(DateTime selectedDate, string option)
         {
             List<MessageEntity> messages = new List<MessageEntity>();
-            for (var day = 0; day < 1; day++)
-                for (var hour = 0; hour < 24; hour++)
-                    for (var minute = 0; minute < 60; minute++)
-                        for (var second = 0; second < 60; second++)
-                        {
-                            var message = new MessageEntity(selectedDate.AddDays(day).AddHours(hour).AddMinutes(minute).AddSeconds(second), option);
-                            messages.Add(message);
-                        }
+            for (var hour = 0; hour < 24; hour++)
+                for (var minute = 0; minute < 60; minute++)
+                    for (var second = 0; second < 60; second++)
+                    {
+                        var message = new MessageEntity(selectedDate.AddHours(hour).AddMinutes(minute).AddSeconds(second), option);
+                        messages.Add(message);
+                    }
 
             return messages;
         }

@@ -1,0 +1,52 @@
+﻿<Page
+    x:Class="PerformanceTests.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:PerformanceTests"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:Microsoft.Toolkit.Uwp.UI.Controls" xmlns:sys="using:System"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <StackPanel Orientation="Vertical">
+        <Button Click="Delete_All_Button_Click">Delete all records</Button>
+
+        <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical">
+                <TextBlock>Day:</TextBlock>
+                <DatePicker x:Name="DatePicker" SelectedDate="{x:Bind Day}"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Vertical">
+                <TextBlock>Retrive time:</TextBlock>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock>Start time:</TextBlock>
+                    <TimePicker x:Name="StartTimePicker" Time="00:00" IsEnabled="false"></TimePicker>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock>End time:</TextBlock>
+                    <TimePicker x:Name="EndTimePicker" Time="00:01"></TimePicker>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Orientation="Vertical">
+                <TextBlock>Result:</TextBlock>
+                <TextBox x:Name="ResultTextBox" />
+            </StackPanel>
+        </StackPanel>
+
+        <controls:Expander Header="Option1: - partion key: device ID - rowkey: timestamp"
+                           IsExpanded="true">
+            <StackPanel>
+                <Button Click="Generate_Option1">
+                    Generate Option 1
+                </Button>
+                <Button Click="Retrive_Option1">
+                    Retrive option 1
+                </Button>
+            </StackPanel>
+        </controls:Expander>
+
+    </StackPanel>
+</Page>

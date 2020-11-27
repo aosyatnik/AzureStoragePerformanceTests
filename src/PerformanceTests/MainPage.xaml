@@ -11,16 +11,16 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <StackPanel Orientation="Vertical">
-        <Button Click="Delete_All_Button_Click">Delete all records</Button>
+        <!--<Button Click="Delete_All_Button_Click">Delete all records</Button>-->
 
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical">
                 <TextBlock>Day:</TextBlock>
                 <DatePicker x:Name="DatePicker" SelectedDate="{x:Bind Day, Mode=TwoWay}"/>
-                <TextBlock>+ days:</TextBlock>
+                <!--<TextBlock>+ days:</TextBlock>
                 <TextBox Text="{x:Bind DaysToAdd, Mode=TwoWay}" />
                 <TextBlock>Day index:</TextBlock>
-                <TextBlock Text="{x:Bind DayIndex, Mode=TwoWay}" />
+                <TextBlock Text="{x:Bind DayIndex, Mode=TwoWay}" />-->
             </StackPanel>
 
             <StackPanel Orientation="Vertical">

@@ -81,5 +81,21 @@
             </Button>
         </controls:Expander>
 
+        <controls:Expander Header="Option4: - partion key: 1 hour block - rowkey: 1 minute. Merged messages!"
+                           IsExpanded="true">
+            <Button Click="Retrive_Option4">
+                Retrive option 4
+            </Button>
+        </controls:Expander>
+
+        <controls:Expander Header="Option5: - partion key: 1 hour block - rowkey: 1 minute. Merged messages!"
+                           IsExpanded="true">
+            <Button Click="Retrive_Option5">
+                Retrive option 5
+            </Button>
+        </controls:Expander>
+
+        <!--<Button Click="Upload_Json_Click">Create cached json for 1 day</Button>-->
+
     </StackPanel>
 </Page>

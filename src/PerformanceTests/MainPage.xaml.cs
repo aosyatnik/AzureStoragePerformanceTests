@@ -534,6 +534,7 @@ namespace PerformanceTests
                         }
                     }
 
+                    // ---------- Get 4 15 min blocks as 1 call. -----------------
 
                     /*var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
                     var patitionFilters = "";
@@ -575,6 +576,9 @@ namespace PerformanceTests
                             Debug.WriteLine($"Retrieve 1 hour takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}. Query: {patitionFilters}");
                         }));
                     }*/
+
+
+                    // ---------- Get all hours as 1 call. -----------------
 
                     /*var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
                     var hourfilter = "";
@@ -714,6 +718,8 @@ namespace PerformanceTests
                     }
                 }
 
+                // ---------- Get all hours as 1 call. -----------------
+
                 /*var hoursFinalFilter = new StringBuilder();
                 for (var i = 0; i < hourFilters.Count; i++)
                 {
@@ -754,6 +760,282 @@ namespace PerformanceTests
                 await Task.WhenAll(tasks);
                 sw.Stop();
                 ResultTextBox.Text = $"Option3: Found {finalResult.Count} records. It took {String.Format("{0:0.00000}", sw.Elapsed.TotalSeconds)} seconds.";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+        }
+
+        #endregion
+
+        #region Option4
+
+        private async void Retrive_Option4(object sender, RoutedEventArgs e)
+        {
+            ResultTextBox.Text = "";
+
+            var table = tableClient.GetTableReference("option4");
+            var startTime = StartTimePicker.Time;
+            var endTime = EndTimePicker.Time;
+
+            try
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                var finalResult = new List<MessageEntity>();
+                var tasks = new List<Task>();
+
+                for (var hour = 0; hour <= endTime.Hours; hour++)
+                {
+                    var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
+
+                    if (endMinutes == 60) // full hour
+                    {
+                        var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Day.AddHours(hour).ToString("yyyyMMddHH"));
+                        var query = new TableQuery<MergedMessageEntity_Option4>().Where(partitionFilter);
+
+                        tasks.Add(Task.Run(async () =>
+                        {
+                            //Stopwatch sw1 = new Stopwatch();
+                            //sw1.Start();
+
+                            var token = new TableContinuationToken();
+                            do
+                            {
+                                var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                token = seg.ContinuationToken;
+                                lock (finalResult)
+                                {
+                                    finalResult.AddRange(seg.SelectMany(merged =>
+                                    {
+                                        var messages = new List<MessageEntity>();
+                                        for (var sec = 0; sec < 60; sec++)
+                                        {
+                                            var m = new MessageEntity();
+                                            m.Sensor1 = merged.Sensor1Dict[$"{sec}"];
+                                            m.Sensor2 = merged.Sensor2Dict[$"{sec}"];
+                                            m.Sensor3 = merged.Sensor3Dict[$"{sec}"];
+                                            m.Sensor4 = merged.Sensor4Dict[$"{sec}"];
+                                            m.Sensor5 = merged.Sensor5Dict[$"{sec}"];
+                                            messages.Add(m);
+                                        }
+
+                                        return messages;
+                                    }));
+                                }
+                            }
+                            while (token != null);
+
+                            //sw1.Stop();
+                            //Debug.WriteLine($"Retrieve 1 hour block takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                        }));
+                    }
+                    else // left minutes
+                    {
+                        var h = Day.AddHours(hour);
+                        var rowKeys = new List<string>();
+                        var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHH"));
+                        for (var i = 1; i <= endMinutes; i++)
+                        {
+                            rowKeys.Add(h.AddMinutes(i).ToString("yyyyMMddHHmm"));
+                        }
+
+                        var rowsFilter = new StringBuilder();
+                        for (var i = 0; i < rowKeys.Count; i++)
+                        {
+                            var r = rowKeys[i];
+                            rowsFilter.Append(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, r));
+
+                            if (i != rowKeys.Count - 1)
+                                rowsFilter.Append(" " + TableOperators.Or + " ");
+                        }
+
+                        if (rowsFilter.Length > 0)
+                        {
+                            var combinedFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
+                            var query = new TableQuery<MergedMessageEntity_Option4>().Where(combinedFilter);
+
+                            tasks.Add(Task.Run(async () =>
+                            {
+                                //Stopwatch sw1 = new Stopwatch();
+                                //sw1.Start();
+
+                                var token = new TableContinuationToken();
+                                do
+                                {
+                                    var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                    token = seg.ContinuationToken;
+                                    finalResult.AddRange(seg.SelectMany(merged =>
+                                    {
+                                        var messages = new List<MessageEntity>();
+                                        for (var sec = 0; sec < 60; sec++)
+                                        {
+                                            var m = new MessageEntity();
+                                            m.Sensor1 = merged.Sensor1Dict[$"{sec}"];
+                                            m.Sensor2 = merged.Sensor2Dict[$"{sec}"];
+                                            m.Sensor3 = merged.Sensor3Dict[$"{sec}"];
+                                            m.Sensor4 = merged.Sensor4Dict[$"{sec}"];
+                                            m.Sensor5 = merged.Sensor5Dict[$"{sec}"];
+                                            messages.Add(m);
+                                        }
+
+                                        return messages;
+                                    }));
+                                }
+                                while (token != null);
+
+                                //sw1.Stop();
+                                //Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                            }));
+                        }
+                    }
+                }
+
+
+                await Task.WhenAll(tasks);
+                sw.Stop();
+                ResultTextBox.Text = $"Option4: Found {finalResult.Count} records. It took {String.Format("{0:0.00000}", sw.Elapsed.TotalSeconds)} seconds.";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+        }
+
+        #endregion
+
+        #region Option5
+
+        private async void Retrive_Option5(object sender, RoutedEventArgs e)
+        {
+            ResultTextBox.Text = "";
+
+            var table = tableClient.GetTableReference("option5");
+            var startTime = StartTimePicker.Time;
+            var endTime = EndTimePicker.Time;
+
+            try
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                var finalResult = new List<MessageEntity>();
+                var tasks = new List<Task>();
+
+                for (var hour = 0; hour <= endTime.Hours; hour++)
+                {
+                    var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
+
+                    if (endMinutes == 60) // full hour
+                    {
+                        var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Day.AddHours(hour).ToString("yyyyMMddHH"));
+                        var query = new TableQuery<MergedMessageEntity_Option5>().Where(partitionFilter);
+
+                        tasks.Add(Task.Run(async () =>
+                        {
+                            //Stopwatch sw1 = new Stopwatch();
+                            //sw1.Start();
+
+                            var token = new TableContinuationToken();
+                            do
+                            {
+                                var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                token = seg.ContinuationToken;
+                                lock (finalResult)
+                                {
+                                    finalResult.AddRange(seg.SelectMany(merged =>
+                                    {
+                                        var messages = new List<MessageEntity>();
+                                        for (var sec = 0; sec < 60; sec++)
+                                        {
+                                            var m = new MessageEntity();
+                                            var value = merged.GetValue(sec);
+                                            m.Sensor1 = value.Sensor1;
+                                            m.Sensor2 = value.Sensor2;
+                                            m.Sensor3 = value.Sensor3;
+                                            m.Sensor4 = value.Sensor4;
+                                            m.Sensor5 = value.Sensor5;
+                                            messages.Add(m);
+                                        }
+
+                                        return messages;
+                                    }));
+                                }
+                            }
+                            while (token != null);
+
+                            //sw1.Stop();
+                            //Debug.WriteLine($"Retrieve 1 hour block takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                        }));
+                    }
+                    else // left minutes
+                    {
+                        var h = Day.AddHours(hour);
+                        var rowKeys = new List<string>();
+                        var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHH"));
+                        for (var i = 1; i <= endMinutes; i++)
+                        {
+                            rowKeys.Add(h.AddMinutes(i).ToString("yyyyMMddHHmm"));
+                        }
+
+                        var rowsFilter = new StringBuilder();
+                        for (var i = 0; i < rowKeys.Count; i++)
+                        {
+                            var r = rowKeys[i];
+                            rowsFilter.Append(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, r));
+
+                            if (i != rowKeys.Count - 1)
+                                rowsFilter.Append(" " + TableOperators.Or + " ");
+                        }
+
+                        if (rowsFilter.Length > 0)
+                        {
+                            var combinedFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
+                            var query = new TableQuery<MergedMessageEntity_Option5>().Where(combinedFilter);
+
+                            tasks.Add(Task.Run(async () =>
+                            {
+                                //Stopwatch sw1 = new Stopwatch();
+                                //sw1.Start();
+
+                                var token = new TableContinuationToken();
+                                do
+                                {
+                                    var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                    token = seg.ContinuationToken;
+                                    finalResult.AddRange(seg.SelectMany(merged =>
+                                    {
+                                        var messages = new List<MessageEntity>();
+                                        for (var sec = 0; sec < 60; sec++)
+                                        {
+                                            var m = new MessageEntity();
+                                            var value = merged.GetValue(sec);
+                                            m.Sensor1 = value.Sensor1;
+                                            m.Sensor2 = value.Sensor2;
+                                            m.Sensor3 = value.Sensor3;
+                                            m.Sensor4 = value.Sensor4;
+                                            m.Sensor5 = value.Sensor5;
+                                            messages.Add(m);
+                                        }
+
+                                        return messages;
+                                    }));
+                                }
+                                while (token != null);
+
+                                //sw1.Stop();
+                                //Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                            }));
+                        }
+                    }
+                }
+
+
+                await Task.WhenAll(tasks);
+                sw.Stop();
+                ResultTextBox.Text = $"Option 5: Found {finalResult.Count} records. It took {String.Format("{0:0.00000}", sw.Elapsed.TotalSeconds)} seconds.";
             }
             catch (Exception ex)
             {

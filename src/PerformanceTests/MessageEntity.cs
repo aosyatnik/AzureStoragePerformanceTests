@@ -34,6 +34,13 @@ namespace PerformanceTests
                 case "Option1":
                     Option1();
                     break;
+
+                case "Option2":
+                    Option2();
+                    break;
+
+                default:
+                    throw new Exception("Unknown option");
             }
         }
 
@@ -45,6 +52,17 @@ namespace PerformanceTests
         public void Option1()
         {
             PartitionKey = "device_id";
+            RowKey = generationTime.ToString("yyyyMMddHHmmss");
+        }
+
+        /// <summary>
+        /// 1 table
+        /// - partion key: day
+        /// - rowkey: timestamp
+        /// </summary>
+        public void Option2()
+        {
+            PartitionKey = generationTime.ToString("yyyyMMdd");
             RowKey = generationTime.ToString("yyyyMMddHHmmss");
         }
     }

@@ -27,11 +27,11 @@
                 <TextBlock>Retrive time:</TextBlock>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock>Start time:</TextBlock>
-                    <TimePicker x:Name="StartTimePicker" Time="00:00" IsEnabled="false"></TimePicker>
+                    <TimePicker x:Name="StartTimePicker" Time="00:00" IsEnabled="false" ClockIdentifier="24HourClock"></TimePicker>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock>End time:</TextBlock>
-                    <TimePicker x:Name="EndTimePicker" Time="00:01"></TimePicker>
+                    <TimePicker x:Name="EndTimePicker" Time="00:15" ClockIdentifier="24HourClock"></TimePicker>
                 </StackPanel>
             </StackPanel>
 
@@ -44,13 +44,41 @@
         <controls:Expander Header="Option1: - partion key: device ID - rowkey: timestamp"
                            IsExpanded="true">
             <StackPanel>
-                <Button Click="Generate_Option1">
+                <!--<Button Click="Generate_Option1">
                     Generate Option 1
+                </Button>-->
+                <Button Click="Retrive_Option1_LongFilter">
+                    Retrive option 1 via long filter
                 </Button>
-                <Button Click="Retrive_Option1">
-                    Retrive option 1
+                <Button Click="Retrive_Option1_ShortFilter">
+                    Retrive option 1 via short filter
+                </Button>
+                <Button Click="Retrive_Option1_LongBatch">
+                    Retrive option 1 via long batch operation
                 </Button>
             </StackPanel>
+        </controls:Expander>
+
+        <controls:Expander Header="Option2: - partion key: day - rowkey: timestamp"
+                           IsExpanded="true">
+            <StackPanel>
+                <!--<Button Click="Generate_Option2">
+                    Generate Option 2
+                </Button>-->
+                <Button Click="Retrive_Option2_LongFilter">
+                    Retrive option 2 via long filter
+                </Button>
+                <Button Click="Retrive_Option2_ShortFilter">
+                    Retrive option 2 via short filter
+                </Button>
+            </StackPanel>
+        </controls:Expander>
+
+        <controls:Expander Header="Option3: - partion key: 15 min block - rowkey: timestamp"
+                           IsExpanded="true">
+            <Button Click="Retrive_Option3">
+                Retrive option 3
+            </Button>
         </controls:Expander>
 
     </StackPanel>

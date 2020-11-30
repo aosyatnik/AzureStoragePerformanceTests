@@ -1177,6 +1177,7 @@ namespace PerformanceTests
             try
             {
                 var finalResult = new List<MessageEntity>();
+                var tasks = new List<Task>();
 
                 var days = EndDay.Date.Subtract(StartDay.Date).Days;
 
@@ -1185,31 +1186,53 @@ namespace PerformanceTests
 
                 for (var d = 0; d <= days; d++)
                 {
-                    var fileName = StartDay.Date.AddDays(d).ToString("yyyyMMdd");
-                    var blobClient = new BlobClient(connectionString, CONTAINER_NAME, fileName);
-
-
-                    var download = await blobClient.DownloadAsync();
-
-                    var mergedMessages = download.Value.Content.Deserialize<IEnumerable<MergedMessageEntity_Option5>>();
-                    finalResult.AddRange(mergedMessages.SelectMany(merged =>
+                    var copy = d;
+                    tasks.Add(Task.Run(async () =>
                     {
-                        var messages = new List<MessageEntity>();
-                        for (var sec = 0; sec < 60; sec++)
+                        var fileName = StartDay.Date.AddDays(copy).ToString("yyyyMMdd");
+                        var blobClient = new BlobClient(connectionString, CONTAINER_NAME, fileName);
+
+                        try
                         {
-                            var m = new MessageEntity();
-                            var value = merged.GetValue(sec);
-                            m.Sensor1 = value.Sensor1;
-                            m.Sensor2 = value.Sensor2;
-                            m.Sensor3 = value.Sensor3;
-                            m.Sensor4 = value.Sensor4;
-                            m.Sensor5 = value.Sensor5;
-                            messages.Add(m);
+                            if (!await blobClient.ExistsAsync())
+                            {
+                                return;
+                            }
+                        }
+                        catch
+                        {
+                            return;
                         }
 
-                        return messages;
+                        var download = await blobClient.DownloadAsync();
+
+                        var mergedMessages = download.Value.Content.Deserialize<IEnumerable<MergedMessageEntity_Option5>>();
+                        var messages = mergedMessages.SelectMany(merged =>
+                        {
+                            var mm = new List<MessageEntity>();
+                            for (var sec = 0; sec < 60; sec++)
+                            {
+                                var m = new MessageEntity();
+                                var value = merged.GetValue(sec);
+                                m.Sensor1 = value.Sensor1;
+                                m.Sensor2 = value.Sensor2;
+                                m.Sensor3 = value.Sensor3;
+                                m.Sensor4 = value.Sensor4;
+                                m.Sensor5 = value.Sensor5;
+                                mm.Add(m);
+                            }
+
+                            return mm;
+                        });
+
+                        lock (finalResult)
+                        {
+                            finalResult.AddRange(messages);
+                        }
                     }));
                 }
+
+                await Task.WhenAll(tasks);
 
                 sw.Stop();
                 ResultTextBox.Text = $"Downloaded from json cache: Found {finalResult.Count} records. It took {String.Format("{0:0.00000}", sw.Elapsed.TotalSeconds)} seconds.";

@@ -1,4 +1,6 @@
-﻿using Microsoft.Azure.Cosmos.Table;
+﻿using Azure.Storage.Blobs;
+using Microsoft.Azure.Cosmos.Table;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -30,6 +32,9 @@ namespace PerformanceTests
         private const string connectionString = "DefaultEndpointsProtocol=https;AccountName=pmsysperformancetests;AccountKey=+86NsTIPwT27tA+5/w4EktnU5GAGJZtTBrFGmsapBxDafd7AJwazyRm2+bekAaYaSStobQ2il9ZW8JCjyVWdNw==;EndpointSuffix=core.windows.net";
         private CloudStorageAccount storageAccount;// => CloudStorageAccount.Parse(connectionString);
         private CloudTableClient tableClient;// => storageAccount.CreateCloudTableClient();
+        private BlobServiceClient _blobServiceClient;
+
+        public const string CONTAINER_NAME = "deviceid";
 
         public DateTimeOffset Day = new DateTimeOffset(2019, 01, 01, 0, 0, 0, TimeSpan.Zero);
         public int DaysToAdd = 1;
@@ -40,6 +45,13 @@ namespace PerformanceTests
             this.InitializeComponent();
             storageAccount = CloudStorageAccount.Parse(connectionString);
             tableClient = storageAccount.CreateCloudTableClient();
+            _blobServiceClient = new BlobServiceClient(connectionString);
+
+            var container = _blobServiceClient.GetBlobContainers().FirstOrDefault(c => c.Name == CONTAINER_NAME);
+            if (container is null)
+            {
+                _blobServiceClient.CreateBlobContainer(CONTAINER_NAME);
+            }
         }
 
         private void Delete_All_Button_Click(object sender, RoutedEventArgs e)
@@ -91,6 +103,7 @@ namespace PerformanceTests
                 }
                 catch (Exception ex)
                 {
+                    ResultTextBox.Text = ex.Message;
                     Debug.WriteLine(ex.Message);
                 }
             }
@@ -427,6 +440,7 @@ namespace PerformanceTests
             }
             catch (Exception ex)
             {
+                ResultTextBox.Text = ex.Message;
                 Debug.WriteLine(ex.Message);
             }
         }
@@ -763,13 +777,14 @@ namespace PerformanceTests
             }
             catch (Exception ex)
             {
+                ResultTextBox.Text = ex.Message;
                 Debug.WriteLine(ex.Message);
             }
         }
 
         #endregion
 
-        #region Option4
+        #region Option 4
 
         private async void Retrive_Option4(object sender, RoutedEventArgs e)
         {
@@ -837,7 +852,7 @@ namespace PerformanceTests
                         var h = Day.AddHours(hour);
                         var rowKeys = new List<string>();
                         var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHH"));
-                        for (var i = 1; i <= endMinutes; i++)
+                        for (var i = 0; i <= endMinutes; i++)
                         {
                             rowKeys.Add(h.AddMinutes(i).ToString("yyyyMMddHHmm"));
                         }
@@ -900,13 +915,14 @@ namespace PerformanceTests
             }
             catch (Exception ex)
             {
+                ResultTextBox.Text = ex.Message;
                 Debug.WriteLine(ex.Message);
             }
         }
 
         #endregion
 
-        #region Option5
+        #region Option 5
 
         private async void Retrive_Option5(object sender, RoutedEventArgs e)
         {
@@ -975,7 +991,7 @@ namespace PerformanceTests
                         var h = Day.AddHours(hour);
                         var rowKeys = new List<string>();
                         var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHH"));
-                        for (var i = 1; i <= endMinutes; i++)
+                        for (var i = 0; i <= endMinutes; i++)
                         {
                             rowKeys.Add(h.AddMinutes(i).ToString("yyyyMMddHHmm"));
                         }
@@ -1039,6 +1055,119 @@ namespace PerformanceTests
             }
             catch (Exception ex)
             {
+                ResultTextBox.Text = ex.Message;
+                Debug.WriteLine(ex.Message);
+            }
+        }
+
+        #endregion
+
+        #region Json cache
+
+        private async void Upload_Json_Click(object sender, RoutedEventArgs e)
+        {
+            ResultTextBox.Text = "";
+
+            var table = tableClient.GetTableReference("option5");
+
+            try
+            {
+                var finalResult = new List<MergedMessageEntity_Option5>();
+                var tasks = new List<Task>();
+
+                for (var hour = 0; hour <= 23; hour++)
+                {
+                    var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Day.AddHours(hour).ToString("yyyyMMddHH"));
+                    var query = new TableQuery<MergedMessageEntity_Option5>().Where(partitionFilter);
+
+                    tasks.Add(Task.Run(async () =>
+                    {
+                        //Stopwatch sw1 = new Stopwatch();
+                        //sw1.Start();
+
+                        var token = new TableContinuationToken();
+                        do
+                        {
+                            var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                            token = seg.ContinuationToken;
+                            lock (finalResult)
+                            {
+                                finalResult.AddRange(seg);
+                            }
+                        }
+                        while (token != null);
+                    }));
+                }
+
+                await Task.WhenAll(tasks);
+
+                var fileName = Day.Date.ToString("yyyyMMdd");
+
+                var stream = new MemoryStream();
+                using (var streamWriter = new StreamWriter(stream: stream, encoding: Encoding.UTF8, bufferSize: 4096, leaveOpen: true)) // last parameter is important
+                using (var jsonWriter = new JsonTextWriter(streamWriter))
+                {
+                    var serializer = new JsonSerializer();
+                    serializer.Serialize(jsonWriter, finalResult);
+                    streamWriter.Flush();
+                    stream.Seek(0, SeekOrigin.Begin);
+                }
+
+                var blobClient = new BlobClient(connectionString, CONTAINER_NAME, fileName);
+                await blobClient.DeleteIfExistsAsync();
+                await blobClient.UploadAsync(stream);
+
+                ResultTextBox.Text = $"Uploaded json file: {fileName}";
+            }
+            catch (Exception ex)
+            {
+                ResultTextBox.Text = ex.Message;
+                Debug.WriteLine(ex.Message);
+            }
+        }
+
+
+        private async void Download_Json_Click(object sender, RoutedEventArgs e)
+        {
+            ResultTextBox.Text = "";
+
+            try
+            {
+                var finalResult = new List<MessageEntity>();
+
+                var fileName = Day.Date.ToString("yyyyMMdd");
+                var blobClient = new BlobClient(connectionString, CONTAINER_NAME, fileName);
+
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                var download = await blobClient.DownloadAsync();
+
+                var mergedMessages = download.Value.Content.Deserialize<IEnumerable<MergedMessageEntity_Option5>>();
+                finalResult.AddRange(mergedMessages.SelectMany(merged =>
+                {
+                    var messages = new List<MessageEntity>();
+                    for (var sec = 0; sec < 60; sec++)
+                    {
+                        var m = new MessageEntity();
+                        var value = merged.GetValue(sec);
+                        m.Sensor1 = value.Sensor1;
+                        m.Sensor2 = value.Sensor2;
+                        m.Sensor3 = value.Sensor3;
+                        m.Sensor4 = value.Sensor4;
+                        m.Sensor5 = value.Sensor5;
+                        messages.Add(m);
+                    }
+
+                    return messages;
+                }));
+
+                sw.Stop();
+                ResultTextBox.Text = $"Downloaded from json cache: Found {finalResult.Count} records. It took {String.Format("{0:0.00000}", sw.Elapsed.TotalSeconds)} seconds.";
+            }
+            catch (Exception ex)
+            {
+                ResultTextBox.Text = ex.Message;
                 Debug.WriteLine(ex.Message);
             }
         }

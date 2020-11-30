@@ -95,7 +95,12 @@
             </Button>
         </controls:Expander>
 
-        <!--<Button Click="Upload_Json_Click">Create cached json for 1 day</Button>-->
-
+        <controls:Expander Header="Json caching"
+                           IsExpanded="true">
+            <StackPanel Orientation="Vertical">
+                <Button Click="Upload_Json_Click">Upload cached json for 1 day</Button>
+                <Button Click="Download_Json_Click">Download cached json for 1 day</Button>
+            </StackPanel>
+        </controls:Expander>
     </StackPanel>
 </Page>

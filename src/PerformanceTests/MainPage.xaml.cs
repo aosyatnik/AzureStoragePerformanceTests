@@ -36,7 +36,8 @@ namespace PerformanceTests
 
         public const string CONTAINER_NAME = "deviceid";
 
-        public DateTimeOffset Day = new DateTimeOffset(2019, 01, 01, 0, 0, 0, TimeSpan.Zero);
+        public DateTimeOffset StartDay = new DateTimeOffset(2019, 01, 01, 0, 0, 0, TimeSpan.Zero);
+        public DateTimeOffset EndDay = new DateTimeOffset(2019, 01, 01, 0, 0, 0, TimeSpan.Zero);
         public int DaysToAdd = 1;
         public int DayIndex = 0;
 
@@ -80,7 +81,7 @@ namespace PerformanceTests
             for (var day = 0; day < DaysToAdd; day++)
             {
                 DayIndex = day;
-                var messages = GenerateMessagesEachSecond(Day.Date.AddDays(day), "Option1");
+                var messages = GenerateMessagesEachSecond(StartDay.Date.AddDays(day), "Option1");
                 var tasks = new List<Task>();
 
                 try
@@ -112,18 +113,21 @@ namespace PerformanceTests
         {
             ResultTextBox.Text = "";
 
-            var endTime = EndTimePicker.Time;
-
             var rowKeys = new List<string>();
-            for (var hour = 0; hour <= endTime.Hours; hour++)
-            {
-                var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
-                for (var minute = 0; minute < endMinutes; minute++)
-                    for (var second = 0; second < 60; second++)
-                    {
-                        rowKeys.Add(Day.AddHours(hour).AddMinutes(minute).AddSeconds(second).ToString("yyyyMMddHHmmss"));
-                    }
-            }
+
+            var endTime = EndTimePicker.Time;
+            var days = EndDay.Date.Subtract(StartDay.Date).Days;
+
+            for (var d = 0; d <= days; d++)
+                for (var hour = 0; hour <= endTime.Hours; hour++)
+                {
+                    var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
+                    for (var minute = 0; minute < endMinutes; minute++)
+                        for (var second = 0; second < 60; second++)
+                        {
+                            rowKeys.Add(StartDay.AddDays(d).AddHours(hour).AddMinutes(minute).AddSeconds(second).ToString("yyyyMMddHHmmss"));
+                        }
+                }
 
             var table = tableClient.GetTableReference("option1");
 
@@ -184,7 +188,10 @@ namespace PerformanceTests
                         {
                             var seg = await table.ExecuteQuerySegmentedAsync(query, token);
                             token = seg.ContinuationToken;
-                            finalResult.AddRange(seg);
+                            lock (finalResult)
+                            {
+                                finalResult.AddRange(seg);
+                            }
                         }
                         while (token != null);
                     }));
@@ -212,8 +219,8 @@ namespace PerformanceTests
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                var startRowKey = Day.Date.ToString("yyyyMMddHHmmss");
-                var endRowKey = Day.Date.AddHours(endTime.Hours).AddMinutes(endTime.Minutes).ToString("yyyyMMddHHmmss");
+                var startRowKey = StartDay.Date.ToString("yyyyMMddHHmmss");
+                var endRowKey = StartDay.Date.AddHours(endTime.Hours).AddMinutes(endTime.Minutes).ToString("yyyyMMddHHmmss");
 
                 var finalResult = new List<MessageEntity>();
                 //var tasks = new List<Task>();
@@ -257,7 +264,7 @@ namespace PerformanceTests
                 for (var minute = 0; minute < endMinutes; minute++)
                     for (var second = 0; second < 60; second++)
                     {
-                        rowKeys.Add(Day.AddHours(hour).AddMinutes(minute).AddSeconds(second).ToString("yyyyMMddHHmmss"));
+                        rowKeys.Add(StartDay.AddHours(hour).AddMinutes(minute).AddSeconds(second).ToString("yyyyMMddHHmmss"));
                     }
             }
 
@@ -328,7 +335,7 @@ namespace PerformanceTests
             for (var day = 0; day < DaysToAdd; day++)
             {
                 DayIndex = day;
-                var messages = GenerateMessagesEachSecond(Day.Date.AddDays(day), "Option2");
+                var messages = GenerateMessagesEachSecond(StartDay.Date.AddDays(day), "Option2");
                 var tasks = new List<Task>();
 
                 try
@@ -358,18 +365,21 @@ namespace PerformanceTests
 
         private async void Retrive_Option2_LongFilter(object sender, RoutedEventArgs e)
         {
-            var endTime = EndTimePicker.Time;
-
             var rowKeys = new List<string>();
-            for (var hour = 0; hour <= endTime.Hours; hour++)
-            {
-                var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
-                for (var minute = 0; minute < endMinutes; minute++)
-                    for (var second = 0; second < 60; second++)
-                    {
-                        rowKeys.Add(Day.AddHours(hour).AddMinutes(minute).AddSeconds(second).ToString("yyyyMMddHHmmss"));
-                    }
-            }
+
+            var endTime = EndTimePicker.Time;
+            var days = EndDay.Date.Subtract(StartDay.Date).Days;
+
+            for (var d = 0; d <= days; d++)
+                for (var hour = 0; hour <= endTime.Hours; hour++)
+                {
+                    var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
+                    for (var minute = 0; minute < endMinutes; minute++)
+                        for (var second = 0; second < 60; second++)
+                        {
+                            rowKeys.Add(StartDay.AddDays(d).AddHours(hour).AddMinutes(minute).AddSeconds(second).ToString("yyyyMMddHHmmss"));
+                        }
+                }
 
             var table = tableClient.GetTableReference("option2");
 
@@ -381,7 +391,7 @@ namespace PerformanceTests
                 var finalResult = new List<MessageEntity>();
                 var tasks = new List<Task>();
 
-                var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Day.Date.ToString("yyyyMMdd"));
+                var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, StartDay.Date.ToString("yyyyMMdd"));
                 var rowsFilter = new StringBuilder();
                 var k = 0;
                 for (var i = 0; i < rowKeys.Count; i++)
@@ -405,7 +415,11 @@ namespace PerformanceTests
                             {
                                 var seg = await table.ExecuteQuerySegmentedAsync(query, token);
                                 token = seg.ContinuationToken;
-                                finalResult.AddRange(seg);
+
+                                lock (finalResult)
+                                {
+                                    finalResult.AddRange(seg);
+                                }
                             }
                             while (token != null);
                         }));
@@ -427,7 +441,10 @@ namespace PerformanceTests
                         {
                             var seg = await table.ExecuteQuerySegmentedAsync(query, token);
                             token = seg.ContinuationToken;
-                            finalResult.AddRange(seg);
+                            lock (finalResult)
+                            {
+                                finalResult.AddRange(seg);
+                            }
                         }
                         while (token != null);
                     }));
@@ -457,13 +474,13 @@ namespace PerformanceTests
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                var startRowKey = Day.Date.ToString("yyyyMMddHHmmss");
-                var endRowKey = Day.Date.AddHours(endTime.Hours).AddMinutes(endTime.Minutes).ToString("yyyyMMddHHmmss");
+                var startRowKey = StartDay.Date.ToString("yyyyMMddHHmmss");
+                var endRowKey = StartDay.Date.AddHours(endTime.Hours).AddMinutes(endTime.Minutes).ToString("yyyyMMddHHmmss");
 
                 var finalResult = new List<MessageEntity>();
                 //var tasks = new List<Task>();
 
-                var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Day.Date.ToString("yyyyMMdd"));
+                var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, StartDay.Date.ToString("yyyyMMdd"));
                 var startRowsFilter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, startRowKey);
                 var endRowsFilter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, endRowKey);
                 var rowsFilter = TableQuery.CombineFilters(startRowsFilter, TableOperators.And, endRowsFilter);
@@ -500,6 +517,7 @@ namespace PerformanceTests
             //var table = tableClient.GetTableReference("option3");
             var startTime = StartTimePicker.Time;
             var endTime = EndTimePicker.Time;
+            var days = EndDay.Date.Subtract(StartDay.Date).Days;
 
             try
             {
@@ -511,226 +529,227 @@ namespace PerformanceTests
 
                 var hourFilters = new List<string>();
 
-                for (var hour = 0; hour <= endTime.Hours; hour++)
-                {
-                    var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
-
-                    if (endMinutes == 60) // full hour
+                for (var d = 0; d <= days; d++)
+                    for (var hour = 0; hour <= endTime.Hours; hour++)
                     {
-                        var h = Day.Date.AddHours(hour);
-                        for (var i = 0; i < 4; i++)
+                        var endMinutes = d == days && hour == endTime.Hours ? endTime.Minutes : 60;
+
+                        if (endMinutes == 60) // full hour
                         {
-                            var min15_block = h.AddMinutes(i * 15).ToString("yyyyMMddHHmm");
-                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, min15_block);
-                            var query = new TableQuery<MessageEntity>().Where(partitionFilter);
-
-                            tasks.Add(Task.Run(async () =>
+                            var h = StartDay.Date.AddDays(d).AddHours(hour);
+                            for (var i = 0; i < 4; i++)
                             {
-                                Stopwatch sw1 = new Stopwatch();
-                                sw1.Start();
+                                var min15_block = h.AddMinutes(i * 15).ToString("yyyyMMddHHmm");
+                                var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, min15_block);
+                                var query = new TableQuery<MessageEntity>().Where(partitionFilter);
 
-                                var table = tableClient.GetTableReference("option3");
-                                var token = new TableContinuationToken();
-                                do
+                                tasks.Add(Task.Run(async () =>
                                 {
-                                    var seg = await table.ExecuteQuerySegmentedAsync(query, token);
-                                    token = seg.ContinuationToken;
-                                    lock (finalResult)
+                                    Stopwatch sw1 = new Stopwatch();
+                                    sw1.Start();
+
+                                    var table = tableClient.GetTableReference("option3");
+                                    var token = new TableContinuationToken();
+                                    do
                                     {
-                                        finalResult.AddRange(seg);
-                                    }
-                                }
-                                while (token != null);
-
-                                sw1.Stop();
-                                Debug.WriteLine($"Retrieve 15 min block takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}. Query: {partitionFilter}");
-                            }));
-                        }
-                    }
-
-                    // ---------- Get 4 15 min blocks as 1 call. -----------------
-
-                    /*var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
-                    var patitionFilters = "";
-                    if (endMinutes == 60) // full hour
-                    {
-                        var h = Day.Date.AddHours(hour);
-                        for (var i = 0; i < 4; i++)
-                        {
-                            var min15_block = h.AddMinutes(i * 15).ToString("yyyyMMddHHmm");
-                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, min15_block);
-                            if (i != 3)
-                                partitionFilter += " " + TableOperators.Or + " ";
-
-                            patitionFilters += partitionFilter;
-                        }
-
-
-                        var query = new TableQuery<MessageEntity>().Where(patitionFilters);
-
-                        tasks.Add(Task.Run(async () =>
-                        {
-                            Stopwatch sw1 = new Stopwatch();
-                            sw1.Start();
-
-                            var table = tableClient.GetTableReference("option3");
-                            var token = new TableContinuationToken();
-                            do
-                            {
-                                var seg = await table.ExecuteQuerySegmentedAsync(query, token);
-                                token = seg.ContinuationToken;
-                                lock (finalResult)
-                                {
-                                    finalResult.AddRange(seg);
-                                }
-                            }
-                            while (token != null);
-
-                            sw1.Stop();
-                            Debug.WriteLine($"Retrieve 1 hour takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}. Query: {patitionFilters}");
-                        }));
-                    }*/
-
-
-                    // ---------- Get all hours as 1 call. -----------------
-
-                    /*var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
-                    var hourfilter = "";
-                    if (endMinutes == 60)
-                    {
-                        var h = Day.Date.AddHours(hour);
-                        for (var i = 0; i < 4; i++)
-                        {
-                            var min15_block = h.AddMinutes(i * 15).ToString("yyyyMMddHHmm");
-                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, min15_block);
-                            if (i != 3)
-                                partitionFilter += " " + TableOperators.Or + " ";
-
-                            hourfilter += partitionFilter;
-                        }
-
-                        hourFilters.Add(hourfilter);
-                    }*/
-
-                    else // + extra minutes
-                    {
-                        var min15_blocks = endMinutes / 15;
-                        var h = Day.Date.AddHours(hour);
-
-                        for (var i = 0; i < min15_blocks; i++)
-                        {
-                            var min15_block = h.AddMinutes(i * 15).ToString("yyyyMMddHHmm");
-                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, min15_block);
-                            var query = new TableQuery<MessageEntity>().Where(partitionFilter);
-
-                            tasks.Add(Task.Run(async () =>
-                            {
-                                Stopwatch sw1 = new Stopwatch();
-                                sw1.Start();
-
-                                var token = new TableContinuationToken();
-                                var table = tableClient.GetTableReference("option3");
-                                do
-                                {
-                                    var seg = await table.ExecuteQuerySegmentedAsync(query, token);
-                                    token = seg.ContinuationToken;
-                                    lock (finalResult)
-                                    {
-                                        finalResult.AddRange(seg);
-                                    }
-                                }
-                                while (token != null);
-
-                                sw1.Stop();
-                                Debug.WriteLine($"Retrieve 15 min block {min15_block} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
-                            }));
-                        }
-
-                        var leftMinutes = endMinutes % 15;
-                        if (leftMinutes > 0)
-                        {
-                            h = h.AddMinutes(min15_blocks * 15);
-                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHHmm"));
-                            var rowKeys = new List<string>();
-
-                            //Stopwatch sw1 = new Stopwatch();
-                            //sw1.Start();
-
-                            for (var i = 0; i < leftMinutes; i++)
-                                for (var second = 0; second < 60; second++)
-                                {
-                                    rowKeys.Add(h.AddMinutes(i).AddSeconds(second).ToString("yyyyMMddHHmmss"));
-                                }
-
-                            //sw1.Stop();
-                            //Debug.WriteLine($"Key generation takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
-
-                            var rowsFilter = new StringBuilder();
-                            var k = 0;
-                            for (var i = 0; i < rowKeys.Count; i++)
-                            {
-                                k++;
-                                var r = rowKeys[i];
-                                rowsFilter.Append(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, r));
-
-                                if (i != rowKeys.Count - 1 && k != 700)
-                                    rowsFilter.Append(" " + TableOperators.Or + " ");
-
-                                if (k == 700)
-                                {
-                                    var comFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
-                                    var q = new TableQuery<MessageEntity>().Where(comFilter);
-
-                                    tasks.Add(Task.Run(async () =>
-                                    {
-                                        Stopwatch sw1 = new Stopwatch();
-                                        sw1.Start();
-
-                                        var token = new TableContinuationToken();
-                                        var table = tableClient.GetTableReference("option3");
-                                        do
+                                        var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                        token = seg.ContinuationToken;
+                                        lock (finalResult)
                                         {
-                                            var seg = await table.ExecuteQuerySegmentedAsync(q, token);
-                                            token = seg.ContinuationToken;
                                             finalResult.AddRange(seg);
                                         }
-                                        while (token != null);
+                                    }
+                                    while (token != null);
 
-                                        sw1.Stop();
-                                        Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
-                                    }));
+                                    sw1.Stop();
+                                    Debug.WriteLine($"Retrieve 15 min block takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}. Query: {partitionFilter}");
+                                }));
+                            }
+                        }
 
-                                    rowsFilter.Clear();
-                                    k = 0;
-                                }
+                        // ---------- Get 4 15 min blocks as 1 call. -----------------
+
+                        /*var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
+                        var patitionFilters = "";
+                        if (endMinutes == 60) // full hour
+                        {
+                            var h = Day.Date.AddHours(hour);
+                            for (var i = 0; i < 4; i++)
+                            {
+                                var min15_block = h.AddMinutes(i * 15).ToString("yyyyMMddHHmm");
+                                var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, min15_block);
+                                if (i != 3)
+                                    partitionFilter += " " + TableOperators.Or + " ";
+
+                                patitionFilters += partitionFilter;
                             }
 
 
-                            var combinedFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
-                            var query = new TableQuery<MessageEntity>().Where(combinedFilter);
+                            var query = new TableQuery<MessageEntity>().Where(patitionFilters);
 
                             tasks.Add(Task.Run(async () =>
                             {
                                 Stopwatch sw1 = new Stopwatch();
                                 sw1.Start();
 
-                                var token = new TableContinuationToken();
                                 var table = tableClient.GetTableReference("option3");
+                                var token = new TableContinuationToken();
                                 do
                                 {
                                     var seg = await table.ExecuteQuerySegmentedAsync(query, token);
                                     token = seg.ContinuationToken;
-                                    finalResult.AddRange(seg);
+                                    lock (finalResult)
+                                    {
+                                        finalResult.AddRange(seg);
+                                    }
                                 }
                                 while (token != null);
 
                                 sw1.Stop();
-                                Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                                Debug.WriteLine($"Retrieve 1 hour takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}. Query: {patitionFilters}");
                             }));
+                        }*/
 
+
+                        // ---------- Get all hours as 1 call. -----------------
+
+                        /*var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
+                        var hourfilter = "";
+                        if (endMinutes == 60)
+                        {
+                            var h = Day.Date.AddHours(hour);
+                            for (var i = 0; i < 4; i++)
+                            {
+                                var min15_block = h.AddMinutes(i * 15).ToString("yyyyMMddHHmm");
+                                var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, min15_block);
+                                if (i != 3)
+                                    partitionFilter += " " + TableOperators.Or + " ";
+
+                                hourfilter += partitionFilter;
+                            }
+
+                            hourFilters.Add(hourfilter);
+                        }*/
+
+                        else // + extra minutes
+                        {
+                            var min15_blocks = endMinutes / 15;
+                            var h = StartDay.Date.AddDays(d).AddHours(hour);
+
+                            for (var i = 0; i < min15_blocks; i++)
+                            {
+                                var min15_block = h.AddMinutes(i * 15).ToString("yyyyMMddHHmm");
+                                var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, min15_block);
+                                var query = new TableQuery<MessageEntity>().Where(partitionFilter);
+
+                                tasks.Add(Task.Run(async () =>
+                                {
+                                    Stopwatch sw1 = new Stopwatch();
+                                    sw1.Start();
+
+                                    var token = new TableContinuationToken();
+                                    var table = tableClient.GetTableReference("option3");
+                                    do
+                                    {
+                                        var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                        token = seg.ContinuationToken;
+                                        lock (finalResult)
+                                        {
+                                            finalResult.AddRange(seg);
+                                        }
+                                    }
+                                    while (token != null);
+
+                                    sw1.Stop();
+                                    Debug.WriteLine($"Retrieve 15 min block {min15_block} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                                }));
+                            }
+
+                            var leftMinutes = endMinutes % 15;
+                            if (leftMinutes > 0)
+                            {
+                                h = h.AddMinutes(min15_blocks * 15);
+                                var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHHmm"));
+                                var rowKeys = new List<string>();
+
+                                //Stopwatch sw1 = new Stopwatch();
+                                //sw1.Start();
+
+                                for (var i = 0; i <= leftMinutes; i++)
+                                    for (var second = 0; second < 60; second++)
+                                    {
+                                        rowKeys.Add(h.AddMinutes(i).AddSeconds(second).ToString("yyyyMMddHHmmss"));
+                                    }
+
+                                //sw1.Stop();
+                                //Debug.WriteLine($"Key generation takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+
+                                var rowsFilter = new StringBuilder();
+                                var k = 0;
+                                for (var i = 0; i < rowKeys.Count; i++)
+                                {
+                                    k++;
+                                    var r = rowKeys[i];
+                                    rowsFilter.Append(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, r));
+
+                                    if (i != rowKeys.Count - 1 && k != 700)
+                                        rowsFilter.Append(" " + TableOperators.Or + " ");
+
+                                    if (k == 700)
+                                    {
+                                        var comFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
+                                        var q = new TableQuery<MessageEntity>().Where(comFilter);
+
+                                        tasks.Add(Task.Run(async () =>
+                                        {
+                                            Stopwatch sw1 = new Stopwatch();
+                                            sw1.Start();
+
+                                            var token = new TableContinuationToken();
+                                            var table = tableClient.GetTableReference("option3");
+                                            do
+                                            {
+                                                var seg = await table.ExecuteQuerySegmentedAsync(q, token);
+                                                token = seg.ContinuationToken;
+                                                finalResult.AddRange(seg);
+                                            }
+                                            while (token != null);
+
+                                            sw1.Stop();
+                                            Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                                        }));
+
+                                        rowsFilter.Clear();
+                                        k = 0;
+                                    }
+                                }
+
+
+                                var combinedFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
+                                var query = new TableQuery<MessageEntity>().Where(combinedFilter);
+
+                                tasks.Add(Task.Run(async () =>
+                                {
+                                    Stopwatch sw1 = new Stopwatch();
+                                    sw1.Start();
+
+                                    var token = new TableContinuationToken();
+                                    var table = tableClient.GetTableReference("option3");
+                                    do
+                                    {
+                                        var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                        token = seg.ContinuationToken;
+                                        finalResult.AddRange(seg);
+                                    }
+                                    while (token != null);
+
+                                    sw1.Stop();
+                                    Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                                }));
+
+                            }
                         }
                     }
-                }
 
                 // ---------- Get all hours as 1 call. -----------------
 
@@ -793,6 +812,7 @@ namespace PerformanceTests
             var table = tableClient.GetTableReference("option4");
             var startTime = StartTimePicker.Time;
             var endTime = EndTimePicker.Time;
+            var days = EndDay.Date.Subtract(StartDay.Date).Days;
 
             try
             {
@@ -802,75 +822,15 @@ namespace PerformanceTests
                 var finalResult = new List<MessageEntity>();
                 var tasks = new List<Task>();
 
-                for (var hour = 0; hour <= endTime.Hours; hour++)
-                {
-                    var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
-
-                    if (endMinutes == 60) // full hour
+                for (var d = 0; d <= days; d++)
+                    for (var hour = 0; hour <= endTime.Hours; hour++)
                     {
-                        var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Day.AddHours(hour).ToString("yyyyMMddHH"));
-                        var query = new TableQuery<MergedMessageEntity_Option4>().Where(partitionFilter);
+                        var endMinutes = d == days && hour == endTime.Hours ? endTime.Minutes : 60;
 
-                        tasks.Add(Task.Run(async () =>
+                        if (endMinutes == 60) // full hour
                         {
-                            //Stopwatch sw1 = new Stopwatch();
-                            //sw1.Start();
-
-                            var token = new TableContinuationToken();
-                            do
-                            {
-                                var seg = await table.ExecuteQuerySegmentedAsync(query, token);
-                                token = seg.ContinuationToken;
-                                lock (finalResult)
-                                {
-                                    finalResult.AddRange(seg.SelectMany(merged =>
-                                    {
-                                        var messages = new List<MessageEntity>();
-                                        for (var sec = 0; sec < 60; sec++)
-                                        {
-                                            var m = new MessageEntity();
-                                            m.Sensor1 = merged.Sensor1Dict[$"{sec}"];
-                                            m.Sensor2 = merged.Sensor2Dict[$"{sec}"];
-                                            m.Sensor3 = merged.Sensor3Dict[$"{sec}"];
-                                            m.Sensor4 = merged.Sensor4Dict[$"{sec}"];
-                                            m.Sensor5 = merged.Sensor5Dict[$"{sec}"];
-                                            messages.Add(m);
-                                        }
-
-                                        return messages;
-                                    }));
-                                }
-                            }
-                            while (token != null);
-
-                            //sw1.Stop();
-                            //Debug.WriteLine($"Retrieve 1 hour block takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
-                        }));
-                    }
-                    else // left minutes
-                    {
-                        var h = Day.AddHours(hour);
-                        var rowKeys = new List<string>();
-                        var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHH"));
-                        for (var i = 0; i <= endMinutes; i++)
-                        {
-                            rowKeys.Add(h.AddMinutes(i).ToString("yyyyMMddHHmm"));
-                        }
-
-                        var rowsFilter = new StringBuilder();
-                        for (var i = 0; i < rowKeys.Count; i++)
-                        {
-                            var r = rowKeys[i];
-                            rowsFilter.Append(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, r));
-
-                            if (i != rowKeys.Count - 1)
-                                rowsFilter.Append(" " + TableOperators.Or + " ");
-                        }
-
-                        if (rowsFilter.Length > 0)
-                        {
-                            var combinedFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
-                            var query = new TableQuery<MergedMessageEntity_Option4>().Where(combinedFilter);
+                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, StartDay.AddDays(d).AddHours(hour).ToString("yyyyMMddHH"));
+                            var query = new TableQuery<MergedMessageEntity_Option4>().Where(partitionFilter);
 
                             tasks.Add(Task.Run(async () =>
                             {
@@ -882,9 +842,12 @@ namespace PerformanceTests
                                 {
                                     var seg = await table.ExecuteQuerySegmentedAsync(query, token);
                                     token = seg.ContinuationToken;
-                                    finalResult.AddRange(seg.SelectMany(merged =>
+
+
+                                    var messages = seg.SelectMany(merged =>
                                     {
-                                        var messages = new List<MessageEntity>();
+                                        var mm = new List<MessageEntity>();
+
                                         for (var sec = 0; sec < 60; sec++)
                                         {
                                             var m = new MessageEntity();
@@ -893,20 +856,91 @@ namespace PerformanceTests
                                             m.Sensor3 = merged.Sensor3Dict[$"{sec}"];
                                             m.Sensor4 = merged.Sensor4Dict[$"{sec}"];
                                             m.Sensor5 = merged.Sensor5Dict[$"{sec}"];
-                                            messages.Add(m);
+                                            mm.Add(m);
                                         }
 
-                                        return messages;
-                                    }));
+                                        return mm;
+                                    });
+
+                                    lock (finalResult)
+                                    {
+                                        finalResult.AddRange(messages);
+                                    }
                                 }
                                 while (token != null);
 
                                 //sw1.Stop();
-                                //Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                                //Debug.WriteLine($"Retrieve 1 hour block takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
                             }));
                         }
+                        else // left minutes
+                        {
+                            var h = StartDay.AddDays(d).AddHours(hour);
+                            var rowKeys = new List<string>();
+                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHH"));
+                            for (var i = 0; i <= endMinutes; i++)
+                            {
+                                rowKeys.Add(h.AddMinutes(i).ToString("yyyyMMddHHmm"));
+                            }
+
+                            var rowsFilter = new StringBuilder();
+                            for (var i = 0; i < rowKeys.Count; i++)
+                            {
+                                var r = rowKeys[i];
+                                rowsFilter.Append(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, r));
+
+                                if (i != rowKeys.Count - 1)
+                                    rowsFilter.Append(" " + TableOperators.Or + " ");
+                            }
+
+                            if (rowsFilter.Length > 0)
+                            {
+                                var combinedFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
+                                var query = new TableQuery<MergedMessageEntity_Option4>().Where(combinedFilter);
+
+                                tasks.Add(Task.Run(async () =>
+                                {
+                                    //Stopwatch sw1 = new Stopwatch();
+                                    //sw1.Start();
+
+                                    var token = new TableContinuationToken();
+                                    do
+                                    {
+                                        var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                        token = seg.ContinuationToken;
+
+
+                                        var messages = seg.SelectMany(merged =>
+                                        {
+                                            var mm = new List<MessageEntity>();
+
+                                            for (var sec = 0; sec < 60; sec++)
+                                            {
+                                                var m = new MessageEntity();
+                                                m.Sensor1 = merged.Sensor1Dict[$"{sec}"];
+                                                m.Sensor2 = merged.Sensor2Dict[$"{sec}"];
+                                                m.Sensor3 = merged.Sensor3Dict[$"{sec}"];
+                                                m.Sensor4 = merged.Sensor4Dict[$"{sec}"];
+                                                m.Sensor5 = merged.Sensor5Dict[$"{sec}"];
+                                                mm.Add(m);
+                                            }
+
+                                            return mm;
+                                        });
+
+                                        lock (finalResult)
+                                        {
+                                            finalResult.AddRange(messages);
+                                        }
+                                    }
+                                    while (token != null);
+
+                                    //sw1.Stop();
+                                    //Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                                }));
+                            }
+                        }
                     }
-                }
 
 
                 await Task.WhenAll(tasks);
@@ -931,6 +965,7 @@ namespace PerformanceTests
             var table = tableClient.GetTableReference("option5");
             var startTime = StartTimePicker.Time;
             var endTime = EndTimePicker.Time;
+            var days = EndDay.Date.Subtract(StartDay.Date).Days;
 
             try
             {
@@ -940,76 +975,15 @@ namespace PerformanceTests
                 var finalResult = new List<MessageEntity>();
                 var tasks = new List<Task>();
 
-                for (var hour = 0; hour <= endTime.Hours; hour++)
-                {
-                    var endMinutes = hour == endTime.Hours ? endTime.Minutes : 60;
-
-                    if (endMinutes == 60) // full hour
+                for (var d = 0; d <= days; d++)
+                    for (var hour = 0; hour <= endTime.Hours; hour++)
                     {
-                        var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Day.AddHours(hour).ToString("yyyyMMddHH"));
-                        var query = new TableQuery<MergedMessageEntity_Option5>().Where(partitionFilter);
+                        var endMinutes = d == days && hour == endTime.Hours ? endTime.Minutes : 60;
 
-                        tasks.Add(Task.Run(async () =>
+                        if (endMinutes == 60) // full hour
                         {
-                            //Stopwatch sw1 = new Stopwatch();
-                            //sw1.Start();
-
-                            var token = new TableContinuationToken();
-                            do
-                            {
-                                var seg = await table.ExecuteQuerySegmentedAsync(query, token);
-                                token = seg.ContinuationToken;
-                                lock (finalResult)
-                                {
-                                    finalResult.AddRange(seg.SelectMany(merged =>
-                                    {
-                                        var messages = new List<MessageEntity>();
-                                        for (var sec = 0; sec < 60; sec++)
-                                        {
-                                            var m = new MessageEntity();
-                                            var value = merged.GetValue(sec);
-                                            m.Sensor1 = value.Sensor1;
-                                            m.Sensor2 = value.Sensor2;
-                                            m.Sensor3 = value.Sensor3;
-                                            m.Sensor4 = value.Sensor4;
-                                            m.Sensor5 = value.Sensor5;
-                                            messages.Add(m);
-                                        }
-
-                                        return messages;
-                                    }));
-                                }
-                            }
-                            while (token != null);
-
-                            //sw1.Stop();
-                            //Debug.WriteLine($"Retrieve 1 hour block takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
-                        }));
-                    }
-                    else // left minutes
-                    {
-                        var h = Day.AddHours(hour);
-                        var rowKeys = new List<string>();
-                        var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHH"));
-                        for (var i = 0; i <= endMinutes; i++)
-                        {
-                            rowKeys.Add(h.AddMinutes(i).ToString("yyyyMMddHHmm"));
-                        }
-
-                        var rowsFilter = new StringBuilder();
-                        for (var i = 0; i < rowKeys.Count; i++)
-                        {
-                            var r = rowKeys[i];
-                            rowsFilter.Append(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, r));
-
-                            if (i != rowKeys.Count - 1)
-                                rowsFilter.Append(" " + TableOperators.Or + " ");
-                        }
-
-                        if (rowsFilter.Length > 0)
-                        {
-                            var combinedFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
-                            var query = new TableQuery<MergedMessageEntity_Option5>().Where(combinedFilter);
+                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, StartDay.AddDays(d).AddHours(hour).ToString("yyyyMMddHH"));
+                            var query = new TableQuery<MergedMessageEntity_Option5>().Where(partitionFilter);
 
                             tasks.Add(Task.Run(async () =>
                             {
@@ -1021,9 +995,10 @@ namespace PerformanceTests
                                 {
                                     var seg = await table.ExecuteQuerySegmentedAsync(query, token);
                                     token = seg.ContinuationToken;
-                                    finalResult.AddRange(seg.SelectMany(merged =>
+
+                                    var messages = seg.SelectMany(merged =>
                                     {
-                                        var messages = new List<MessageEntity>();
+                                        var mm = new List<MessageEntity>();
                                         for (var sec = 0; sec < 60; sec++)
                                         {
                                             var m = new MessageEntity();
@@ -1033,20 +1008,88 @@ namespace PerformanceTests
                                             m.Sensor3 = value.Sensor3;
                                             m.Sensor4 = value.Sensor4;
                                             m.Sensor5 = value.Sensor5;
-                                            messages.Add(m);
+                                            mm.Add(m);
                                         }
 
-                                        return messages;
-                                    }));
+                                        return mm;
+                                    });
+                                    lock (finalResult)
+                                    {
+                                        finalResult.AddRange(messages);
+                                    }
                                 }
                                 while (token != null);
 
                                 //sw1.Stop();
-                                //Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                                //Debug.WriteLine($"Retrieve 1 hour block takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
                             }));
                         }
+                        else // left minutes
+                        {
+                            var h = StartDay.AddDays(d).AddHours(hour);
+                            var rowKeys = new List<string>();
+                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, h.ToString("yyyyMMddHH"));
+                            for (var i = 0; i <= endMinutes; i++)
+                            {
+                                rowKeys.Add(h.AddMinutes(i).ToString("yyyyMMddHHmm"));
+                            }
+
+                            var rowsFilter = new StringBuilder();
+                            for (var i = 0; i < rowKeys.Count; i++)
+                            {
+                                var r = rowKeys[i];
+                                rowsFilter.Append(TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.Equal, r));
+
+                                if (i != rowKeys.Count - 1)
+                                    rowsFilter.Append(" " + TableOperators.Or + " ");
+                            }
+
+                            if (rowsFilter.Length > 0)
+                            {
+                                var combinedFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter.ToString());
+                                var query = new TableQuery<MergedMessageEntity_Option5>().Where(combinedFilter);
+
+                                tasks.Add(Task.Run(async () =>
+                                {
+                                    //Stopwatch sw1 = new Stopwatch();
+                                    //sw1.Start();
+
+                                    var token = new TableContinuationToken();
+                                    do
+                                    {
+                                        var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                        token = seg.ContinuationToken;
+
+                                        var messages = seg.SelectMany(merged =>
+                                        {
+                                            var mm = new List<MessageEntity>();
+                                            for (var sec = 0; sec < 60; sec++)
+                                            {
+                                                var m = new MessageEntity();
+                                                var value = merged.GetValue(sec);
+                                                m.Sensor1 = value.Sensor1;
+                                                m.Sensor2 = value.Sensor2;
+                                                m.Sensor3 = value.Sensor3;
+                                                m.Sensor4 = value.Sensor4;
+                                                m.Sensor5 = value.Sensor5;
+                                                mm.Add(m);
+                                            }
+
+                                            return mm;
+                                        });
+                                        lock (finalResult)
+                                        {
+                                            finalResult.AddRange(messages);
+                                        }
+                                    }
+                                    while (token != null);
+
+                                    //sw1.Stop();
+                                    //Debug.WriteLine($"Retrieve left minutes {leftMinutes} takes: {String.Format("{0:0.00000}", sw1.Elapsed.TotalSeconds)}");
+                                }));
+                            }
+                        }
                     }
-                }
 
 
                 await Task.WhenAll(tasks);
@@ -1077,7 +1120,7 @@ namespace PerformanceTests
 
                 for (var hour = 0; hour <= 23; hour++)
                 {
-                    var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, Day.AddHours(hour).ToString("yyyyMMddHH"));
+                    var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, StartDay.AddHours(hour).ToString("yyyyMMddHH"));
                     var query = new TableQuery<MergedMessageEntity_Option5>().Where(partitionFilter);
 
                     tasks.Add(Task.Run(async () =>
@@ -1101,7 +1144,7 @@ namespace PerformanceTests
 
                 await Task.WhenAll(tasks);
 
-                var fileName = Day.Date.ToString("yyyyMMdd");
+                var fileName = StartDay.Date.ToString("yyyyMMdd");
 
                 var stream = new MemoryStream();
                 using (var streamWriter = new StreamWriter(stream: stream, encoding: Encoding.UTF8, bufferSize: 4096, leaveOpen: true)) // last parameter is important
@@ -1135,32 +1178,38 @@ namespace PerformanceTests
             {
                 var finalResult = new List<MessageEntity>();
 
-                var fileName = Day.Date.ToString("yyyyMMdd");
-                var blobClient = new BlobClient(connectionString, CONTAINER_NAME, fileName);
+                var days = EndDay.Date.Subtract(StartDay.Date).Days;
 
                 Stopwatch sw = new Stopwatch();
                 sw.Start();
 
-                var download = await blobClient.DownloadAsync();
-
-                var mergedMessages = download.Value.Content.Deserialize<IEnumerable<MergedMessageEntity_Option5>>();
-                finalResult.AddRange(mergedMessages.SelectMany(merged =>
+                for (var d = 0; d <= days; d++)
                 {
-                    var messages = new List<MessageEntity>();
-                    for (var sec = 0; sec < 60; sec++)
-                    {
-                        var m = new MessageEntity();
-                        var value = merged.GetValue(sec);
-                        m.Sensor1 = value.Sensor1;
-                        m.Sensor2 = value.Sensor2;
-                        m.Sensor3 = value.Sensor3;
-                        m.Sensor4 = value.Sensor4;
-                        m.Sensor5 = value.Sensor5;
-                        messages.Add(m);
-                    }
+                    var fileName = StartDay.Date.AddDays(d).ToString("yyyyMMdd");
+                    var blobClient = new BlobClient(connectionString, CONTAINER_NAME, fileName);
 
-                    return messages;
-                }));
+
+                    var download = await blobClient.DownloadAsync();
+
+                    var mergedMessages = download.Value.Content.Deserialize<IEnumerable<MergedMessageEntity_Option5>>();
+                    finalResult.AddRange(mergedMessages.SelectMany(merged =>
+                    {
+                        var messages = new List<MessageEntity>();
+                        for (var sec = 0; sec < 60; sec++)
+                        {
+                            var m = new MessageEntity();
+                            var value = merged.GetValue(sec);
+                            m.Sensor1 = value.Sensor1;
+                            m.Sensor2 = value.Sensor2;
+                            m.Sensor3 = value.Sensor3;
+                            m.Sensor4 = value.Sensor4;
+                            m.Sensor5 = value.Sensor5;
+                            messages.Add(m);
+                        }
+
+                        return messages;
+                    }));
+                }
 
                 sw.Stop();
                 ResultTextBox.Text = $"Downloaded from json cache: Found {finalResult.Count} records. It took {String.Format("{0:0.00000}", sw.Elapsed.TotalSeconds)} seconds.";

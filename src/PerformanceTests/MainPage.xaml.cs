@@ -29,7 +29,7 @@ namespace PerformanceTests
     /// </summary>
     public sealed partial class MainPage : Page
     {
-        private const string connectionString = "DefaultEndpointsProtocol=https;AccountName=pmsysperformancetests;AccountKey=+86NsTIPwT27tA+5/w4EktnU5GAGJZtTBrFGmsapBxDafd7AJwazyRm2+bekAaYaSStobQ2il9ZW8JCjyVWdNw==;EndpointSuffix=core.windows.net";
+        private const string connectionString = "CONNECTION_STRING";
         private CloudStorageAccount storageAccount;// => CloudStorageAccount.Parse(connectionString);
         private CloudTableClient tableClient;// => storageAccount.CreateCloudTableClient();
         private BlobServiceClient _blobServiceClient;

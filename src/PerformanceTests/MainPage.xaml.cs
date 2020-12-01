@@ -803,6 +803,123 @@ namespace PerformanceTests
 
         #endregion
 
+        #region Option 3.5
+
+        private async void Retrive_Option3_5(object sender, RoutedEventArgs e)
+        {
+            ResultTextBox.Text = "";
+
+            var table = tableClient.GetTableReference("option35");
+
+            var startTime = StartTimePicker.Time;
+            var endTime = EndTimePicker.Time;
+            var days = EndDay.Date.Subtract(StartDay.Date).Days;
+
+            try
+            {
+                Stopwatch sw = new Stopwatch();
+                sw.Start();
+
+                var finalResult = new List<MessageEntity>();
+                var tasks = new List<Task>();
+
+                var hourFilters = "";
+
+                for (var d = 0; d <= days; d++)
+                    for (var hour = 0; hour <= endTime.Hours; hour++)
+                    {
+                        var endMinutes = d == days && hour == endTime.Hours ? endTime.Minutes : 60;
+
+                        if (endMinutes == 60) // full hour
+                        {
+                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, StartDay.AddDays(d).AddHours(hour).ToString("yyyyMMddHH"));
+                            var query = new TableQuery<MessageEntity>().Where(partitionFilter);
+
+                            tasks.Add(Task.Run(async () =>
+                            {
+                                var token = new TableContinuationToken();
+                                do
+                                {
+                                    var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                    token = seg.ContinuationToken;
+                                    lock (finalResult)
+                                    {
+                                        finalResult.AddRange(seg);
+                                    }
+                                }
+                                while (token != null);
+                            }));
+
+                            /*var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, StartDay.AddDays(d).AddHours(hour).ToString("yyyyMMddHH"));
+                            if (hour != endTime.Hours - 1)
+                                partitionFilter += " " + TableOperators.Or + " ";
+
+                            hourFilters += partitionFilter;*/
+                        }
+                        else // end minutes
+                        {
+                            var startRowKey = StartDay.Date.AddDays(d).AddHours(hour).ToString("yyyyMMddHHmmssffff");
+                            var endRowKey = StartDay.Date.AddDays(d).AddHours(hour).AddMinutes(endTime.Minutes).ToString("yyyyMMddHHmmssffff");
+
+                            var partitionFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, StartDay.AddDays(d).AddHours(hour).ToString("yyyyMMddHH"));
+                            var startRowsFilter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, startRowKey);
+                            var endRowsFilter = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, endRowKey);
+                            var rowsFilter = TableQuery.CombineFilters(startRowsFilter, TableOperators.And, endRowsFilter);
+                            var finalFilter = TableQuery.CombineFilters(partitionFilter, TableOperators.And, rowsFilter);
+                            var query = new TableQuery<MessageEntity>().Where(finalFilter);
+
+                            tasks.Add(Task.Run(async () =>
+                            {
+
+                                var token = new TableContinuationToken();
+                                do
+                                {
+                                    var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                    token = seg.ContinuationToken;
+
+                                    lock (finalResult)
+                                    {
+                                        finalResult.AddRange(seg);
+                                    }
+                                }
+                                while (token != null);
+                            }));
+                        }
+                    }
+
+                if (hourFilters != "")
+                {
+                    var query = new TableQuery<MessageEntity>().Where(hourFilters);
+                    tasks.Add(Task.Run(async () =>
+                                {
+                                    var token = new TableContinuationToken();
+                                    do
+                                    {
+                                        var seg = await table.ExecuteQuerySegmentedAsync(query, token);
+                                        token = seg.ContinuationToken;
+
+                                        lock (finalResult)
+                                        {
+                                            finalResult.AddRange(seg);
+                                        }
+                                    }
+                                    while (token != null);
+                                }));
+                }
+
+                await Task.WhenAll(tasks);
+                sw.Stop();
+                ResultTextBox.Text = $"Option3.5: Found {finalResult.Count} records. It took {String.Format("{0:0.00000}", sw.Elapsed.TotalSeconds)} seconds.";
+            }
+            catch (Exception ex)
+            {
+                ResultTextBox.Text = ex.Message;
+                Debug.WriteLine(ex.Message);
+            }
+        }
+
+        #endregion
+
         #region Option 4
 
         private async void Retrive_Option4(object sender, RoutedEventArgs e)

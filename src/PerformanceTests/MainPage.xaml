@@ -84,6 +84,13 @@
             </Button>
         </controls:Expander>
 
+        <controls:Expander Header="Option3.5: - partion key: 1 hour - rowkey: timestamp with ms"
+                           IsExpanded="true">
+            <Button Click="Retrive_Option3_5">
+                Retrive option 3.5
+            </Button>
+        </controls:Expander>
+
         <controls:Expander Header="Option4: - partion key: 1 hour block - rowkey: 1 minute. Merged messages!"
                            IsExpanded="true">
             <Button Click="Retrive_Option4">

@@ -44,7 +44,7 @@
             </StackPanel>
         </StackPanel>
 
-        <controls:Expander Header="Option1: - partion key: device ID - rowkey: timestamp"
+        <controls:Expander Header="Option1: - partion key: device ID - rowkey: timestamp; 1 message per 1 sec"
                            IsExpanded="true">
             <StackPanel>
                 <!--<Button Click="Generate_Option1">
@@ -56,13 +56,25 @@
                 <Button Click="Retrive_Option1_ShortFilter">
                     Retrive option 1 via short filter
                 </Button>
-                <Button Click="Retrive_Option1_LongBatch">
+                <!--<Button Click="Retrive_Option1_LongBatch">
                     Retrive option 1 via long batch operation
+                </Button>-->
+            </StackPanel>
+        </controls:Expander>
+
+        <controls:Expander Header="Option1.1: - partion key: device ID - rowkey: timestamp; 1 message per 1 min"
+                           IsExpanded="true">
+            <StackPanel>
+                <Button Click="Retrive_Option1_1_LongFilter">
+                    Retrive option 1.1 via long filter
+                </Button>
+                <Button Click="Retrive_Option1_1_ShortFilter">
+                    Retrive option 1.1 via short filter
                 </Button>
             </StackPanel>
         </controls:Expander>
 
-        <controls:Expander Header="Option2: - partion key: day - rowkey: timestamp"
+        <controls:Expander Header="Option2: - partion key: day - rowkey: timestamp; 1 message per 1 sec"
                            IsExpanded="true">
             <StackPanel>
                 <!--<Button Click="Generate_Option2">
@@ -73,6 +85,21 @@
                 </Button>
                 <Button Click="Retrive_Option2_ShortFilter">
                     Retrive option 2 via short filter
+                </Button>
+            </StackPanel>
+        </controls:Expander>
+
+        <controls:Expander Header="Option2.1: - partion key: day - rowkey: timestamp; 1 message per 1 min"
+                           IsExpanded="true">
+            <StackPanel>
+                <!--<Button Click="Generate_Option2">
+                    Generate Option 2
+                </Button>-->
+                <Button Click="Retrive_Option2_1_LongFilter">
+                    Retrive option 2.1 via long filter
+                </Button>
+                <Button Click="Retrive_Option2_1_ShortFilter">
+                    Retrive option 2.1 via short filter
                 </Button>
             </StackPanel>
         </controls:Expander>

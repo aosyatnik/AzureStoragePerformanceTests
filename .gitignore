@@ -1,3 +1,6 @@
 /src/.vs
 /src/PerformanceTests/bin
 /src/PerformanceTests/obj
+/src/PerformanceTests/*.user
+/data_generation/*.csv
+/data_generation/node_modules

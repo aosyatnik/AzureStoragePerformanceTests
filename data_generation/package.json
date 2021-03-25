@@ -1,0 +1,20 @@
+{
+  "name": "namecrawler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Anna Melashkina",
+  "license": "ISC",
+  "dependencies": {
+    "@azure/data-tables": "^1.0.0-beta.1",
+    "cheerio": "^1.0.0-rc.3",
+    "csv-writer": "^1.6.0",
+    "fs": "0.0.1-security",
+    "got": "^11.7.0",
+    "moment": "^2.29.1",
+    "uuid": "^8.3.1"
+  }
+}

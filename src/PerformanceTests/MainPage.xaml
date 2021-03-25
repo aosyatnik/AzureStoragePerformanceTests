@@ -11,16 +11,11 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <StackPanel Orientation="Vertical">
-        <!--<Button Click="Delete_All_Button_Click">Delete all records</Button>-->
 
         <StackPanel Orientation="Horizontal">
             <StackPanel Orientation="Vertical">
                 <TextBlock>Start day:</TextBlock>
                 <DatePicker x:Name="DatePicker" SelectedDate="{x:Bind StartDay, Mode=TwoWay}"/>
-                <!--<TextBlock>+ days:</TextBlock>
-                <TextBox Text="{x:Bind DaysToAdd, Mode=TwoWay}" />
-                <TextBlock>Day index:</TextBlock>
-                <TextBlock Text="{x:Bind DayIndex, Mode=TwoWay}" />-->
 
                 <TextBlock>End day:</TextBlock>
                 <DatePicker SelectedDate="{x:Bind EndDay, Mode=TwoWay}"/>
@@ -47,22 +42,16 @@
         <controls:Expander Header="Option1: - partion key: device ID - rowkey: timestamp; 1 message per 1 sec"
                            IsExpanded="true">
             <StackPanel>
-                <!--<Button Click="Generate_Option1">
-                    Generate Option 1
-                </Button>-->
-                <Button Click="Retrive_Option1_LongFilter">
-                    Retrive option 1 via long filter
-                </Button>
                 <Button Click="Retrive_Option1_ShortFilter">
                     Retrive option 1 via short filter
                 </Button>
-                <!--<Button Click="Retrive_Option1_LongBatch">
-                    Retrive option 1 via long batch operation
-                </Button>-->
+                <Button Click="Retrive_Option1_LongFilter">
+                    Retrive option 1 via long filter
+                </Button>
             </StackPanel>
         </controls:Expander>
 
-        <controls:Expander Header="Option1.1: - partion key: device ID - rowkey: timestamp; 1 message per 1 min"
+        <!--<controls:Expander Header="Option1.1: - partion key: device ID - rowkey: timestamp; 1 message per 1 min"
                            IsExpanded="true">
             <StackPanel>
                 <Button Click="Retrive_Option1_1_LongFilter">
@@ -72,37 +61,31 @@
                     Retrive option 1.1 via short filter
                 </Button>
             </StackPanel>
-        </controls:Expander>
+        </controls:Expander>-->
 
         <controls:Expander Header="Option2: - partion key: day - rowkey: timestamp; 1 message per 1 sec"
                            IsExpanded="true">
             <StackPanel>
-                <!--<Button Click="Generate_Option2">
-                    Generate Option 2
-                </Button>-->
-                <Button Click="Retrive_Option2_LongFilter">
-                    Retrive option 2 via long filter
-                </Button>
                 <Button Click="Retrive_Option2_ShortFilter">
                     Retrive option 2 via short filter
+                </Button>
+                <Button Click="Retrive_Option2_LongFilter">
+                    Retrive option 2 via long filter
                 </Button>
             </StackPanel>
         </controls:Expander>
 
-        <controls:Expander Header="Option2.1: - partion key: day - rowkey: timestamp; 1 message per 1 min"
+        <!--<controls:Expander Header="Option2.1: - partion key: day - rowkey: timestamp; 1 message per 1 min"
                            IsExpanded="true">
             <StackPanel>
-                <!--<Button Click="Generate_Option2">
-                    Generate Option 2
-                </Button>-->
-                <Button Click="Retrive_Option2_1_LongFilter">
-                    Retrive option 2.1 via long filter
-                </Button>
-                <Button Click="Retrive_Option2_1_ShortFilter">
-                    Retrive option 2.1 via short filter
-                </Button>
-            </StackPanel>
-        </controls:Expander>
+            <Button Click="Retrive_Option2_1_LongFilter">
+                Retrive option 2.1 via long filter
+            </Button>
+            <Button Click="Retrive_Option2_1_ShortFilter">
+                Retrive option 2.1 via short filter
+            </Button>
+        </StackPanel>
+        </controls:Expander> -->
 
         <controls:Expander Header="Option3: - partion key: 15 min block - rowkey: timestamp"
                            IsExpanded="true">
@@ -111,12 +94,12 @@
             </Button>
         </controls:Expander>
 
-        <controls:Expander Header="Option3.5: - partion key: 1 hour - rowkey: timestamp with ms"
+        <!--<controls:Expander Header="Option3.5: - partion key: 1 hour - rowkey: timestamp with ms"
                            IsExpanded="true">
             <Button Click="Retrive_Option3_5">
                 Retrive option 3.5
             </Button>
-        </controls:Expander>
+        </controls:Expander>-->
 
         <controls:Expander Header="Option4: - partion key: 1 hour block - rowkey: 1 minute. Merged messages!"
                            IsExpanded="true">
@@ -132,12 +115,12 @@
             </Button>
         </controls:Expander>
 
-        <controls:Expander Header="Json caching"
+        <!--<controls:Expander Header="Json caching"
                            IsExpanded="true">
             <StackPanel Orientation="Vertical">
                 <Button Click="Upload_Json_Click">Upload cached json for 1 day</Button>
                 <Button Click="Download_Json_Click">Download cached json for 1 day</Button>
             </StackPanel>
-        </controls:Expander>
+        </controls:Expander>-->
     </StackPanel>
 </Page>
